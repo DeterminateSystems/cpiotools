@@ -34,33 +34,13 @@ fn main() {
         let start_position = handle.stream_position().unwrap();
         let remaining_bytes = size - start_position;
         if remaining_bytes <= BUF_SIZE_U64 {
-            let mut silly_buffer = [0; 1];
-            let nullread: &[u8; 1] = &[0x00];
-            loop {
-                match handle.read(&mut silly_buffer) {
-                    Ok(0) => {
-                        break;
-                    }
-                    Ok(1) => {
-                        if &silly_buffer != nullread {
-                            handle.seek(SeekFrom::Current(-1)).unwrap();
-                            break;
-                        }
-                    }
-
-                    e => {
-                        e.unwrap();
-                    }
-                }
+            let skipped = skip_nulls(&mut handle).unwrap();
+            if skipped > 0 {
+                println!("Skipped {} null bytes", skipped);
             }
-            break;
         }
 
         let new_position = handle.stream_position().unwrap();
-        if new_position != start_position {
-            println!("Skipped {} null bytes", new_position - start_position);
-        }
-
         if new_position >= size {
             break;
         }
@@ -101,5 +81,96 @@ fn main() {
         );
 
         entry.finish().unwrap();
+    }
+}
+
+fn skip_nulls<T>(mut handle: T) -> Result<u64, std::io::Error>
+where
+    T: ReadSeek,
+{
+    let start_position = handle.stream_position()?;
+    let mut silly_buffer = [0; 1];
+    let nullread: &[u8; 1] = &[0x00];
+    loop {
+        match handle.read(&mut silly_buffer) {
+            Ok(0) => {
+                break;
+            }
+            Ok(1) => {
+                if &silly_buffer != nullread {
+                    handle.seek(SeekFrom::Current(-1))?;
+                    break;
+                }
+            }
+
+            e => {
+                e?;
+            }
+        }
+    }
+
+    let new_position = handle.stream_position()?;
+    Ok(new_position - start_position)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Cursor, Read, Seek, SeekFrom};
+
+    use super::skip_nulls;
+
+    #[test]
+    fn skip_nulls_eof() {
+        let mut data: Cursor<Vec<u8>> = Cursor::new(vec![]);
+
+        assert_eq!(skip_nulls(&mut data).unwrap(), 0);
+        assert_eq!(data.position(), 0);
+    }
+
+    #[test]
+    fn skip_nulls_none_eof() {
+        let mut data: Cursor<Vec<u8>> = Cursor::new(vec![0x01]);
+
+        assert_eq!(skip_nulls(&mut data).unwrap(), 0);
+        assert_eq!(data.position(), 0);
+    }
+
+    #[test]
+    fn skip_nulls_none_then_null() {
+        let mut data: Cursor<Vec<u8>> = Cursor::new(vec![0x01, 0x00]);
+
+        assert_eq!(skip_nulls(&mut data).unwrap(), 0);
+        assert_eq!(data.position(), 0);
+    }
+
+    #[test]
+    fn skip_nulls_null_then_data() {
+        let mut data: Cursor<Vec<u8>> = Cursor::new(vec![0x00, 0x01]);
+
+        assert_eq!(skip_nulls(&mut data).unwrap(), 1);
+        assert_eq!(data.position(), 1);
+        assert_eq!(data.bytes().next().unwrap().unwrap(), 0x01);
+    }
+
+    #[test]
+    fn skip_nulls_many_null_then_data() {
+        let mut data: Cursor<Vec<u8>> = Cursor::new(vec![
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+        ]);
+
+        assert_eq!(skip_nulls(&mut data).unwrap(), 10);
+        assert_eq!(data.position(), 10);
+        assert_eq!(data.bytes().next().unwrap().unwrap(), 0x01);
+    }
+
+    #[test]
+    fn skip_nulls_seeked() {
+        let mut data: Cursor<Vec<u8>> = Cursor::new(vec![0x01, 0x00, 0x01]);
+
+        data.seek(SeekFrom::Start(1)).unwrap();
+
+        assert_eq!(skip_nulls(&mut data).unwrap(), 1);
+        assert_eq!(data.position(), 2);
+        assert_eq!(data.bytes().next().unwrap().unwrap(), 0x01);
     }
 }
