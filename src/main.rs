@@ -69,7 +69,7 @@ fn main() {
                     rdev_major="-",
                     rdev_minor="-",
                     is_trailer="-",
-                    hash="_",
+                    hash="-",
                     name="skipped null bytes",
                 );
             }
