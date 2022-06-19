@@ -1,6 +1,5 @@
 #![allow(clippy::print_literal)]
-use std::io::BufReader;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{BufReader, Read, Seek, SeekFrom};
 
 use cpio::newc::Reader;
 use sha2::{Digest, Sha256};
@@ -12,7 +11,10 @@ pub trait ReadSeek: Read + Seek {}
 impl<T: Read + Seek> ReadSeek for T {}
 
 fn main() {
-    let cpio = std::env::args().nth(1).unwrap();
+    let cpio = match std::env::args().nth(1) {
+        Some(x) => x,
+        None => panic!("usage: cpio-dump ./my.cpio"),
+    };
     let handle = std::fs::File::open(cpio).unwrap();
 
     let size = handle.metadata().unwrap().len();

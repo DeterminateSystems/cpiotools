@@ -1,9 +1,13 @@
 [package]
-name = "cpio-dump"
+name = "cpiotools"
 version = "0.1.0"
 authors = ["Graham Christensen <graham@grahamc.com>"]
 edition = "2018"
 license = "MIT"
+
+[[bin]]
+name = "cpio-dump"
+path = "src/main.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
