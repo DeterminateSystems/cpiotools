@@ -1,11 +1,8 @@
 use std::io::BufReader;
+use std::io::{Read, Seek, SeekFrom};
 
-use base64;
 use cpio::newc::Reader;
 use sha2::{Digest, Sha256};
-
-use std::convert::{TryInto, TryFrom};
-use std::io::{Read, Seek, SeekFrom};
 
 const BUF_SIZE: usize = 16384;
 const BUF_SIZE_U64: u64 = 16384;
@@ -37,45 +34,26 @@ fn main() {
         let start_position = handle.stream_position().unwrap();
         let remaining_bytes = size - start_position;
         if remaining_bytes <= BUF_SIZE_U64 {
+            let mut silly_buffer = [0; 1];
+            let nullread: &[u8; 1] = &[0x00];
             loop {
-                match handle.read(&mut read_buffer) {
+                match handle.read(&mut silly_buffer) {
                     Ok(0) => {
                         break;
                     }
-                    Ok(n) => {
-                        if !read_buffer[..n].iter().all(|e| e == &0x00) {
-                            // roll back n bytes so we can nibble them away like an dummy
-                            handle
-                                .seek(SeekFrom::Current((0 - i32::try_from(n).unwrap()).into()))
-                                .unwrap();
-
-                            let mut silly_buffer = [0; 1];
-                            let nullread: &[u8; 1] = &[0x00];
-                            loop {
-                                match handle.read(&mut silly_buffer) {
-                                    Ok(0) => {
-                                        break;
-                                    }
-                                    Ok(1) => {
-                                        if &silly_buffer != nullread {
-                                            handle.seek(SeekFrom::Current(-1)).unwrap();
-                                            break;
-                                        }
-                                    }
-
-                                    e => {
-                                        e.unwrap();
-                                    }
-                                }
-                            }
+                    Ok(1) => {
+                        if &silly_buffer != nullread {
+                            handle.seek(SeekFrom::Current(-1)).unwrap();
                             break;
                         }
                     }
+
                     e => {
                         e.unwrap();
                     }
                 }
             }
+            break;
         }
 
         let new_position = handle.stream_position().unwrap();
