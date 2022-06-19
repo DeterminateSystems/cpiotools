@@ -4,6 +4,11 @@ version = "0.1.0"
 authors = ["Graham Christensen <graham@grahamc.com>"]
 edition = "2018"
 license = "MIT"
+description = "Dump a CPIO's structure for easy comparisons"
+documentation = "https://github.com/DeterminateSystems/cpiotools/"
+homepage = "https://github.com/DeterminateSystems/cpiotools/"
+repository = "https://github.com/DeterminateSystems/cpiotools/"
+
 
 [[bin]]
 name = "cpio-dump"
