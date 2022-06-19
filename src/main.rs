@@ -44,23 +44,9 @@ fn main() {
         if new_position >= size {
             break;
         }
+
         let mut entry = Reader::new(&mut handle).unwrap();
-
-        loop {
-            match entry.read(&mut read_buffer) {
-                Ok(0) => {
-                    break;
-                }
-                Ok(n) => {
-                    hasher.update(&read_buffer[..n]);
-                }
-                e => {
-                    e.unwrap();
-                }
-            }
-        }
-        let result = hasher.finalize_reset();
-
+        let hash = hash(&mut hasher, &mut read_buffer, &mut entry).unwrap();
         let meta = entry.entry();
         println!(
             "{ino}\t{mode}\t{uid}\t{gid}\t{nlink}\t{mtime}\t{file_size}\t{dev_major}\t{dev_minor}\t{rdev_major}\t{rdev_minor}\t{is_trailer}\t{hash}\t{name}",
@@ -76,7 +62,7 @@ fn main() {
             rdev_major=meta.rdev_major(),
             rdev_minor=meta.rdev_minor(),
             is_trailer=if meta.is_trailer() { "true" } else { "false"},
-            hash=base64::encode(result),
+            hash=hash,
             name=meta.name(),
         );
 
@@ -113,11 +99,51 @@ where
     Ok(new_position - start_position)
 }
 
+fn hash<T>(hasher: &mut Sha256, buffer: &mut [u8], handle: &mut T) -> Result<String, std::io::Error>
+where
+    T: std::io::Read,
+{
+    hasher.reset();
+    loop {
+        match handle.read(buffer) {
+            Ok(0) => {
+                break;
+            }
+            Ok(n) => {
+                hasher.update(&buffer[..n]);
+            }
+            e => {
+                e.unwrap();
+            }
+        }
+    }
+    let result = hasher.finalize_reset();
+    Ok(base64::encode(result))
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::{Cursor, Read, Seek, SeekFrom};
 
-    use super::skip_nulls;
+    use sha2::{Digest, Sha256};
+
+    use super::{hash, skip_nulls, BUF_SIZE};
+
+    #[test]
+    fn test_hash() {
+        let mut hasher = Sha256::new();
+        let mut buffer = [0; BUF_SIZE];
+
+        assert_eq!(
+            hash(&mut hasher, &mut buffer, &mut std::io::empty()).unwrap(),
+            "47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU="
+        );
+
+        assert_eq!(
+            hash(&mut hasher, &mut buffer, &mut Cursor::new(b"hello")).unwrap(),
+            "LPJNul+wow4m6DsqxbninhsWHlwfp0JecwQzYpOLmCQ="
+        );
+    }
 
     #[test]
     fn skip_nulls_eof() {
