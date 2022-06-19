@@ -20,7 +20,23 @@ fn main() {
     let mut hasher = Sha256::new();
     let mut read_buffer = [0; BUF_SIZE];
 
-    println!("ino\tmode\tuid\tgid\tnlink\tmtime\tbytes\tdevmaj\tdevmin\trdevmaj\trdevmin\ttrailer\thash\tname");
+    println!(
+        "{ino}\t{mode}\t{uid}\t{gid}\t{nlink}\t{mtime}\t{file_size}\t{dev_major}\t{dev_minor}\t{rdev_major}\t{rdev_minor}\t{is_trailer}\t{hash}\t{name}",
+        ino="ino",
+        mode="mode",
+        uid="uid",
+        gid="gid",
+        nlink="nlink",
+        mtime="mtime",
+        file_size="bytes",
+        dev_major="devmaj",
+        dev_minor="devmin",
+        rdev_major="rdevmaj",
+        rdev_minor="rdevmin",
+        is_trailer="trailer",
+        hash="hash",
+        name="name"
+    );
 
     loop {
         // GNU cpio seems to pad the end of the file with some number
@@ -36,7 +52,23 @@ fn main() {
         if remaining_bytes <= BUF_SIZE_U64 {
             let skipped = skip_nulls(&mut handle).unwrap();
             if skipped > 0 {
-                println!("Skipped {} null bytes", skipped);
+                println!(
+                    "{ino}\t{mode}\t{uid}\t{gid}\t{nlink}\t{mtime}\t{file_size}\t{dev_major}\t{dev_minor}\t{rdev_major}\t{rdev_minor}\t{is_trailer}\t{hash}\t{name}",
+                    ino="-",
+                    mode="-",
+                    uid="-",
+                    gid="-",
+                    nlink="-",
+                    mtime="-",
+                    file_size=skipped,
+                    dev_major="-",
+                    dev_minor="-",
+                    rdev_major="-",
+                    rdev_minor="-",
+                    is_trailer="-",
+                    hash="_",
+                    name="skipped null bytes",
+                );
             }
         }
 
