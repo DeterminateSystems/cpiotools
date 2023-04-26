@@ -1,6 +1,7 @@
 #![allow(clippy::print_literal)]
-use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::{io::{BufReader, Read, Seek, SeekFrom}, path::PathBuf};
 
+use clap::Parser;
 use cpio::newc::Reader;
 use sha2::{Digest, Sha256};
 
@@ -10,14 +11,22 @@ const BUF_SIZE_U64: u64 = 16384;
 pub trait ReadSeek: Read + Seek {}
 impl<T: Read + Seek> ReadSeek for T {}
 
-fn main() {
-    let cpio = match std::env::args().nth(1) {
-        Some(x) => x,
-        None => panic!("usage: cpio-dump ./my.cpio"),
-    };
-    let handle = std::fs::File::open(cpio).unwrap();
+#[derive(clap::Parser)]
+#[clap(name = "cpio-dump")]
+struct Cli {
+    file: PathBuf,
+    offset: Option<u64>,
+}
 
-    let size = handle.metadata().unwrap().len();
+fn main() {
+    let args = Cli::parse();
+    let mut handle = std::fs::File::open(args.file).unwrap();
+    handle.seek(SeekFrom::End(0)).unwrap();
+    let size = handle.stream_position().unwrap();
+
+    if let Some(offset) = args.offset {
+        handle.seek(SeekFrom::Start(offset)).unwrap();
+    }
 
     let mut handle = BufReader::with_capacity(BUF_SIZE, handle);
     let mut hasher = Sha256::new();
