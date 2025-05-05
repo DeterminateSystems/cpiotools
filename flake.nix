@@ -17,7 +17,7 @@
     in
     {
       devShell = forAllSystems ({ system, pkgs, ... }: inputs.self.packages.${system}.default.overrideAttrs ({ nativeBuildInputs ? [ ], ... }: {
-        packages = nativeBuildInputs ++ (with pkgs; [
+        nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [
           binwalk
           entr
           file
