@@ -5,6 +5,9 @@
 
   outputs = inputs:
     let
+      lastModifiedDate = inputs.self.lastModifiedDate or inputs.self.lastModified or "19700101";
+      version = "${builtins.substring 0 8 lastModifiedDate}-${inputs.self.shortRev or "dirty"}";
+
       allSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
       forAllSystems = f: inputs.nixpkgs.lib.genAttrs allSystems (system: f {
@@ -29,7 +32,7 @@
         ({ system, pkgs, ... }: {
           default = pkgs.rustPlatform.buildRustPackage rec {
             pname = "cpiotools";
-            version = "unreleased";
+            inherit version;
             src = inputs.self;
             cargoLock.lockFile = ./Cargo.lock;
           };
