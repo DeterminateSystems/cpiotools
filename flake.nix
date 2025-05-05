@@ -1,24 +1,20 @@
 {
   description = "cpiotools";
 
-  inputs.nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+  inputs.nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0.1";
 
-  outputs =
-    { self
-    , nixpkgs
-    } @ inputs:
+  outputs = inputs:
     let
-      nameValuePair = name: value: { inherit name value; };
-      allSystems = [ "x86_64-linux" "aarch64-linux" "i686-linux" "x86_64-darwin" "aarch64-darwin" ];
+      allSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
 
-      forAllSystems = f: nixpkgs.lib.genAttrs allSystems (system: f {
+      forAllSystems = f: inputs.nixpkgs.lib.genAttrs allSystems (system: f {
         inherit system;
-        pkgs = import nixpkgs { inherit system; };
+        pkgs = import inputs.nixpkgs { inherit system; };
       });
     in
     {
-      devShell = forAllSystems ({ system, pkgs, ... }: self.packages.${system}.default.overrideAttrs ({ nativeBuildInputs ? [ ], ... }: {
-        nativeBuildInputs = nativeBuildInputs ++ (with pkgs; [
+      devShell = forAllSystems ({ system, pkgs, ... }: inputs.self.packages.${system}.default.overrideAttrs ({ nativeBuildInputs ? [ ], ... }: {
+        packages = nativeBuildInputs ++ (with pkgs; [
           binwalk
           entr
           file
@@ -34,7 +30,7 @@
           default = pkgs.rustPlatform.buildRustPackage rec {
             pname = "cpiotools";
             version = "unreleased";
-            src = self;
+            src = inputs.self;
             cargoLock.lockFile = ./Cargo.lock;
           };
         });
