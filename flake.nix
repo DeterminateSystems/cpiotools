@@ -36,6 +36,7 @@
             entr
             file
             nixpkgs-fmt
+            xxd
           ];
         };
       });
